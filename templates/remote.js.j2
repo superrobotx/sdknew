@@ -1,0 +1,16 @@
+import {callRemote} from './{{misc_file}}'
+
+export default { 
+	{%- for cls in classes %}
+	{{cls.name}}:new class {
+		constructor(){
+			this.args={}
+		}
+		{%- for func in cls.funcs %}
+		async {{func.name}}({{func.args}}){
+			return await callRemote('{{cls.name}}', this.args, '{{func.name}}',{ {{func.args}} })
+		}
+		{%- endfor %}
+	}(),
+	{%- endfor %}
+}

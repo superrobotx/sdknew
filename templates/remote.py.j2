@@ -1,0 +1,40 @@
+import requests, json
+
+def call_remote(cls, init_args, func, args):
+  data = {
+    'cls_name': cls, 'func_name': func,
+    'init_args': init_args, 'func_args': args
+  }
+
+  res = requests.post(
+     'http://localhost:{{port}}/call', 
+      headers={
+        "Content-Type": "application/json",
+      },
+      json=data,
+      timeout=999
+    )
+  return res.json()
+
+{% for cls in classes %}
+class {{cls.name}}:
+
+  {%- for func in cls.children%}
+
+  def {{func.name}}(
+     {%- for arg in func.args %}
+      {{arg}},
+     {%- endfor %}
+  ):
+    return call_remote(
+       "{{cls.name}}", {}, "{{func.name}}", 
+       {
+          {%- for arg in func.args %}
+            '{{arg}}': {{arg}},
+          {%- endfor %}
+       }
+      )
+  {%- endfor %}
+
+{%- endfor %}
+

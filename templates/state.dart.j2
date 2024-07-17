@@ -1,0 +1,79 @@
+// ignore_for_file: non_constant_identifier_names
+import 'package:utils/hub.dart';
+import 'package:flutter/material.dart';
+
+abstract class StateHook<U extends StatefulWidget> extends State<U> {
+  // stream
+  final hub = States();
+
+  late UI ui;
+
+  refresh() {
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    ui = UI(refreshFunc: refresh);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    hub.statesDict.forEach((name, prop) {
+      prop.removeRefreshFunc(refresh);
+    });
+    super.dispose();
+  }
+}
+
+class UI {
+  Function? refreshFunc;
+  UI({this.refreshFunc}) {
+  {%- for cls in classes %}  
+    {{cls.name_snake}} = {{cls.name}}(refreshFunc: refreshFunc);
+  {%- endfor %}
+  }
+  {%- for cls in classes %}  
+  late {{cls.name}} {{cls.name_snake}};
+  {%- endfor %}
+}
+
+{%- for cls in classes %}  
+class {{cls.name}}{
+  final Function? refreshFunc;
+
+  final hub = States();
+
+  {{cls.name}}({required this.refreshFunc}){
+    String name;
+    {%- for prop in cls.props%}
+    name = '{{prop.channel_name}}';
+    hub.statesDict[name] ??= Property(name: name, defaultValue: {{prop.default_value}}, setState: null);
+    {% endfor %}
+  }
+
+  {%- for prop in cls.props %}
+  dynamic get {{prop.name}}{
+    _setRefresh('{{prop.channel_name}}', {{prop.default_value}}, refreshFunc);
+    return States().statesDict['{{prop.channel_name}}']?.value ?? {{prop.default_value}};
+  }
+
+  dynamic get {{prop.name}}_{
+    return States().statesDict['{{prop.channel_name}}']?.value ?? {{prop.default_value}};
+  }
+  
+
+  set {{prop.name}}(dynamic value) {
+    States().statesDict['{{prop.channel_name}}']?.value = value;
+  }
+  {%- endfor %}
+
+  _setRefresh<T>(name, defaultValue, refreshFunc) {
+    if(refreshFunc != null){
+      hub.statesDict[name]?.addRefrshFunc(refreshFunc);
+    }
+  }
+}
+{%- endfor %}
+

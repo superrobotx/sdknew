@@ -1,0 +1,27 @@
+version: '2.2'
+services:
+  ui:
+    image: base:latest
+    container_name: {{UI}}
+    working_dir: '/app'
+    volumes:
+      - ../:/app
+    command: ['bash', 'scripts/run_ui.sh']
+    environment:
+      - PATH=/root/.nvm/versions/node/v21.7.1/bin/:/bin
+    network_mode: "host"
+    restart: always
+      
+  backend:
+    image: base:latest
+    container_name: {{BACKEND}}
+    working_dir: '/app'
+    volumes:
+      - ../:/app
+      - ../../modules:/modules
+    command: ['bash', 'scripts/run_backend.sh']
+    #command: ['sleep', '999999']
+    environment:
+      - PYTHONPATH=/modules
+    network_mode: "host"
+    restart: always

@@ -1,0 +1,34 @@
+// ignore_for_file: non_constant_identifier_names
+import 'package:utils/hub.dart';
+
+var remote = (
+  {%- for cls in classes %}
+  {{cls.name}}: (
+    {%- for func in cls.funcs %}
+    {%- if func.args %}
+    {{func.name}}: ({ {{func.args}} }) {
+    {%- else %}
+    {{func.name}}: () {
+    {%- endif %}
+      return callRemote(clsName: '{{cls.name}}', funcName: '{{func.name}}', args: { {{func.args_dict}} }, remoteUrl: '{{ backend_url}}');
+    },
+    {%- endfor %}
+  ),
+  {%- endfor %}
+);
+
+var stream = (
+  {%- for cls in classes %}
+  {{cls.name}}: (
+    {%- for func in cls.funcs %}
+    {%- if func.args %}
+    {{func.name}}: ({ {{func.args}} }) {
+    {%- else %}
+    {{func.name}}: () {
+    {%- endif %}
+      return streamRemote(clsName: '{{cls.name}}', funcName: '{{func.name}}', args: { {{func.args_dict}} }, remoteUrl: '{{ backend_url }}');
+    },
+    {%- endfor %}
+  ),
+  {%- endfor %}
+);

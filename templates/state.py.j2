@@ -1,0 +1,18 @@
+from server import Property
+
+from addict import Dict
+ui = Dict()
+
+{% for cls in classes %}
+
+class {{cls.name}}:
+  {%- for prop in cls.props %}
+  {{prop.name}} = Property({{ prop.default_value }}, '{{channel_name}}')
+  {%- endfor %}
+
+{%- endfor %}
+
+class ui:
+  {%- for cls in classes %}
+  {{cls.name_snake}} = {{cls.name}}()
+  {%- endfor %}

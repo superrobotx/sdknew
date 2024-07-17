@@ -1,0 +1,23 @@
+import {sendProperty, useProperty, setProperty, getProperty} from './{{misc_file}}'
+
+export default {
+{%- for cls in classes %}  
+  {{cls.name_snake}}: new class {
+    
+  {%- for prop in cls.props %}
+    get _{{ prop.name }}(){
+      return getProperty('{{ prop.channel_name }}', {{ prop.default_value}})
+    }
+    set _{{ prop.name }}(value){
+      setProperty('{{ prop.channel_name }}', value)
+    }
+    get {{ prop.name }}(){
+      return useProperty('{{ prop.channel_name }}', this._{{ prop.name }}?? {{prop.default_value}})
+    }
+    set {{ prop.name }}(value) {
+      sendProperty('{{ prop.channel_name }}', value)
+    }
+  {%- endfor %}
+  }(),
+{%- endfor %}
+}

@@ -1,0 +1,12 @@
+serverAddr = "{{remote_ip}}"
+serverPort = 9999
+auth.token = "aGOke;{c@NO`Xs>q"
+
+
+# 内网 HTTPS 服务
+[[proxies]]
+name = "web-https"
+type = "tcp"
+localPort = {{local_port}}
+remotePort = {{remote_port}}
+
