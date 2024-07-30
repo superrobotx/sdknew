@@ -1,6 +1,7 @@
 from .app import app
 from .utils import *
 from .hub import *
+from .database import *
 
 def run():
   if config.dev_mode:

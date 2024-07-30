@@ -1,12 +1,12 @@
 version: '2.2'
 services:
-  ui:
+  web:
     image: base:latest
-    container_name: {{UI}}
-    working_dir: '/app'
+    container_name: {{web_container_name}}
+    working_dir: '/web'
     volumes:
-      - ../:/app
-    command: ['bash', 'scripts/run_ui.sh']
+      - ./web:/web
+    command: ['npm', 'run', 'dev']
     environment:
       - PATH=/root/.nvm/versions/node/v21.7.1/bin/:/bin
     network_mode: "host"
@@ -14,14 +14,13 @@ services:
       
   backend:
     image: base:latest
-    container_name: {{BACKEND}}
+    container_name: {{backend_container_name}}
     working_dir: '/app'
     volumes:
-      - ../:/app
-      - ../../modules:/modules
-    command: ['bash', 'scripts/run_backend.sh']
-    #command: ['sleep', '999999']
+      - ./:/app
+      - ../sdk:/sdk
+    command: ['python', '-u', 'backend']
     environment:
-      - PYTHONPATH=/modules
+      - PYTHONPATH=./sdk:../sdk:./:../:$PYTHONPATH
     network_mode: "host"
     restart: always

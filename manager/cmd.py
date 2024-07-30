@@ -1,5 +1,8 @@
 import code
 import sys, os
+from .utils import config
+
+from manager.docker import Docker
 from . import generator as generator
 from .vps import VPS
 
@@ -35,6 +38,9 @@ def backend_cmd(args):
     else:
       print('unknown command: backend', args)
       sys.exit(1)
+    sys.exit(0)
+  elif a2 in ['login']:
+    Docker().login(f'{config.name}_backend')
     sys.exit(0)
   else:
     print('unknown command: backend', args)

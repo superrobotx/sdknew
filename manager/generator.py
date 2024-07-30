@@ -441,10 +441,10 @@ class DockerConfigGenerator:
   def __init__(self) -> None:
     pass
 
-  def generate(self, config, target_file):
+  def generate(self, target_file):
     args = {
-      'UI': f'{config.name}_ui',
-      'BACKEND': f'{config.name}_backend'
+      'web_container_name': f'{config.name}_ui',
+      'backend_container_name': f'{config.name}_backend'
     }
     content = render('compose.example.yaml', **args)
     with open(target_file, 'w') as f:
@@ -454,7 +454,7 @@ class ViteConfigGenerator:
   def __init__(self) -> None:
     pass
 
-  def generate(self, config, target_file):
+  def generate(self, target_file):
     args = {
       'PORT': config.network.vite_port
     }
@@ -633,6 +633,16 @@ def code_generate():
   DartUICodeGenerator().generate('./app/lib/generated/state.dart')
 
   FrpConfigGenerator().generate()
+
+  print('generate docker compose')
+  compose_fpath = './compose.yaml'
+  if os.path.exists(compose_fpath):
+    print('-- compose.yaml already exists')
+  else:
+    DockerConfigGenerator().generate(compose_fpath)
+
+  print('vite config generate')
+  ViteConfigGenerator().generate('./web/vite.config.js')
 
 def web_generate():
   print('yarn link')

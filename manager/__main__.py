@@ -33,6 +33,10 @@ if a1 in ['remote']:
   remote_cmd(sys.argv[2:])
   sys.exit(0)
 
+if a1 in ['docker']:
+  docker_cmd(sys.argv[2:])
+  sys.exit(0)
+
 if a1 in ['test']:
   test()
   sys.exit(0)
