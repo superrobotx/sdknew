@@ -19,6 +19,7 @@ dist_dir = os.path.abspath('./web/dist')
 
 @app.route('/')
 def index():
+  return '<h1>fuck</h1>', 200
   print(request.headers)
   if config.dev_mode:
     return redirect(f"http://{config.network.local.backend_ip}:{config.network.vite_port}/", code=302)

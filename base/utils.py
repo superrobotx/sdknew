@@ -106,6 +106,11 @@ db = Database(host=redis_conf.ip, port=redis_conf.port, db=0, password=redis_con
 r.config_set('client-output-buffer-limit',
       'normal 0 0 0 slave 268435456 67108864 60 pubsub 1530554432 1800388608 60')
 
+r_local = redis.Redis(decode_responses=True)
+db_local = Database(decode_responses=True)
+r_local.config_set('client-output-buffer-limit',
+      'normal 0 0 0 slave 268435456 67108864 60 pubsub 1530554432 1800388608 60')
+
 
 class Misc:
   ''' 

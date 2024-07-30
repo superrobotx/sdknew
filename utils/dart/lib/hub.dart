@@ -138,8 +138,12 @@ class Property<T> {
     update();
   }
 
+  set value_(T newValue) {
+    _value = newValue;
+  }
+
   update() {
-    print('update $name ${setStates.length}');
+    //print('update $name ${setStates.length}');
     for (var setState in setStates) {
       setState();
     }
@@ -178,16 +182,17 @@ class States {
 class SSEListener {
   static SSEListener? _instance;
   final states = States();
-  String? remoteUrl;
+  late String remoteUrl;
+  late String channelName;
 
-  factory SSEListener(remoteUrl) {
+  factory SSEListener({required remoteUrl, required channelName}) {
     if (SSEListener._instance == null) {
-      _instance = SSEListener._internal(remoteUrl);
+      _instance = SSEListener._internal(remoteUrl, channelName);
     }
     return _instance!;
   }
 
-  SSEListener._internal(this.remoteUrl) {
+  SSEListener._internal(this.remoteUrl, this.channelName) {
     try {
       SSEClient.unsubscribeFromSSE();
     } catch (e) {
@@ -200,10 +205,10 @@ class SSEListener {
   StreamSubscription? sseSub;
 
   subscibeToRemote() {
-    print('--------subscibe sse');
+    print('--------subscibe sse $remoteUrl');
     sse = SSEClient.subscribeToSSE(
         method: SSERequestType.GET,
-        url: '$remoteUrl/listen/test_channel',
+        url: '$remoteUrl/listen/$channelName',
         header: {
           "Accept": "text/event-stream",
           "Cache-Control": "no-cache",
@@ -211,10 +216,10 @@ class SSEListener {
     sseSub = sse?.listen(
       (event) {
         if (event.event != 'update') {
-          print('unhandle sse event: ${event.event}');
+          //print('unhandle sse event: ${event.event}');
           return;
         }
-        print('recevie ${event.data?.length}');
+        //print('recevie ${event.data?.length}');
         Map state;
         String decText = '';
         try {
@@ -231,7 +236,7 @@ class SSEListener {
         if (event.data != null) {
           var prop = States().getProperty(state['name']);
           if (prop != null) {
-            print("remote state receive ${state['name']}");
+            //print("remote state receive ${state['name']}");
             prop.value = state['data'];
           } else {
             print("remote state miss target ${state['name']}");
@@ -239,10 +244,9 @@ class SSEListener {
         }
       },
       onError: (e) {
-        print('sse error');
-        print(e);
+        print('sse: error: $e');
         Future.delayed(const Duration(seconds: 2)).then((e) {
-          print('reconnect');
+          print('sse: reconnect....');
           subscibeToRemote();
         });
       },
@@ -255,5 +259,15 @@ class SSEListener {
   dispose() {
     //sseSub.cancel();
     //SSEClient.unsubscribeFromSSE();
+  }
+}
+
+initSSE(config) {
+  if (config['dev_mode']) {
+    var netconfig = config['network'];
+    var backendUrl =
+        'http://${netconfig['backend_ip']}:${netconfig['backend_port']}';
+    SSEListener(remoteUrl: backendUrl, channelName: config['name'])
+        .subscibeToRemote();
   }
 }

@@ -2,12 +2,13 @@ import base64
 import redis
 from .utils import config
 import threading, json
-from walrus import Database
+#from walrus import Database
+import walrus
 
 redis_conf = config.network.redis
 
 r = redis.Redis(host=redis_conf.ip, port=redis_conf.port, db=0, password=redis_conf.passwd, decode_responses=True)
-db = Database(host=redis_conf.ip, port=redis_conf.port, db=0, password=redis_conf.passwd, decode_responses=True)
+db = walrus.Database(host=redis_conf.ip, port=redis_conf.port, db=0, password=redis_conf.passwd, decode_responses=True)
 
 
 class RedisBase:

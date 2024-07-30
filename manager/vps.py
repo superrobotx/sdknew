@@ -62,16 +62,19 @@ class VPS:
   _env = 'PYTHONPATH=./sdk:../sdk/:../:./:$PYTHONPATH/'
   def run_backend(self):
     self._run_remote(f'lsof -ti :{config.network.backend_port} | xargs kill')
-    self._run_remote(f'cd {config.name} && {self._env} /usr/bin/python backend/')
-    #self._run_remote(f'cd {config.name} && ls')
+    self._run_remote(f"nohup bash -c 'cd {config.name} && {self._env} /usr/bin/python backend ' > out.txt 2>error.txt &")
+    #self._run_remote(f"cd {config.name} && {self._env} /usr/bin/python backend ")
 
   def run_frps(self):
-    self._push_to_remote('./tmp/frps.toml', config.name)
+    self.push_to_remote('./tmp/frps.toml')
     self._run_remote(f'cd {config.name} && PATH=./sdk/bin:$PATH frps -c frps.toml')
 
   def run_frpc(self):
     cmd = f'./sdk/bin/frpc -c ./tmp/frpc.toml'
     os.system(cmd)
 
+  def print_log(self):
+    self._run_remote(f'cd {config.name} && cat out.txt error.txt')
+
   def test(self):
-    self.run_backend()
+    self._run_remote('cat out.txt')

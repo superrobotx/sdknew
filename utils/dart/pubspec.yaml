@@ -8,6 +8,7 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  audioplayers: ^6.0.0
   encrypt: ^5.0.3
   fetch_client: ^1.1.2
   flutter:

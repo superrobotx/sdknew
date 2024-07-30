@@ -56,7 +56,13 @@ class CallBackend(Thread):
       data = queues[self.tid].get()
       if data is None:
         break
-      print('yield', data)
+      if type(data) == dict:
+        tmp = {}
+        for k,v in data.items():
+          tmp[k] = len(v)
+        print('yield', tmp)
+      else:
+        print('yield', data)
       yield json.dumps(data) + '\n' 
 
   def call_cls_func(self, cls_name, func_name, init_args={}, func_args={}):
@@ -72,6 +78,7 @@ class CallBackend(Thread):
         cls = PyCodeParser().get_cls_by_name(cls_name, 'backend')
         ins = cls(**init_args)
         self.cached_cls[cls_name] = ins
+      print('call', func_name)
       return getattr(ins, func_name)(**func_args)
     except Exception as e:
       traceback.print_exc()

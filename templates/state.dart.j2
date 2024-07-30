@@ -67,6 +67,10 @@ class {{cls.name}}{
   set {{prop.name}}(dynamic value) {
     States().statesDict['{{prop.channel_name}}']?.value = value;
   }
+
+  set {{prop.name}}_(dynamic value) {
+    States().statesDict['{{prop.channel_name}}']?.value_ = value;
+  }
   {%- endfor %}
 
   _setRefresh<T>(name, defaultValue, refreshFunc) {

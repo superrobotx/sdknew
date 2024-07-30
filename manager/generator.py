@@ -6,49 +6,9 @@ from omegaconf import OmegaConf
 import re
 from addict import Dict
 from jinja2 import Environment, FileSystemLoader
-from .utils import config
+from .utils import *
 import ast, os
 
-class Misc:
-  ''' 
-  misc
-  '''
-  def is_notebook(self) -> bool:
-    try:
-        shell = get_ipython().__class__.__name__ # type: ignore 
-        if shell == 'ZMQInteractiveShell':
-            return True   # Jupyter notebook or qtconsole
-        elif shell == 'TerminalInteractiveShell':
-            return False  # Terminal running IPython
-        else:
-            return False  # Other type (?)
-    except NameError:
-        return False 
-
-  def camel_to_snake(self, name):
-    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
-  
-  def snake_to_camel(self, name):
-    return ''.join(word.title() for word in name.split('_'))
-
-  def get_local_ip(self):
-    # Create a socket object
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    try:
-        # Connect to a remote address that is unlikely to exist
-        sock.connect(('10.255.255.255', 1))
-        # Get the local IP address
-        ip_address = sock.getsockname()[0]
-    except Exception:
-        # If the above method fails, fallback to getting the hostname
-        ip_address = socket.gethostbyname(socket.gethostname())
-    finally:
-        # Close the socket
-        sock.close()
-
-    return ip_address
 
 
 class Icons: 
@@ -208,12 +168,13 @@ class PyUICodeGenerator:
   def generate(self, target_file):
 
     classes = []
-    for cls_name_snake, props in config.state.items():
+    for cls_name_snake, props in config['state'].items():
       cls = Dict()
       cls.name_snake = cls_name_snake
       cls.name = Misc().snake_to_camel(cls_name_snake)
 
       cls.props = []
+      props = OmegaConf.to_container(props)
       for prop_name, default_ in props.items():
         prop = Dict()
         default_ = json.dumps(default_)
@@ -455,7 +416,7 @@ class JSMiscCodeGenerator:
   def __init__(self) -> None:
     pass
 
-  def generate(self, target_file):
+  def generate(self, web_target_file, desk_target_file):
     if config.dev_mode:
       state_hub_url = f'http://{config.network.backend_ip}:{config.network.backend_port}/listen/{config.name}'
       remote_url = f'http://{config.network.backend_ip}:{config.network.backend_port}/stream'
@@ -469,15 +430,12 @@ class JSMiscCodeGenerator:
       'local_url': local_url
     }
     content = render('misc.ts', **args)
-    with open(target_file, 'w') as f:
+    with open(web_target_file, 'w') as f:
       f.write(content)
 
-    ''' 
-    content = render('misc_electron.js', **args)
-    target_file = './generated/misc_electron.js'
-    with open(target_file, 'w') as f:
+    content = render('misc_electron.ts', **args)
+    with open(desk_target_file, 'w') as f:
       f.write(content)
-    '''
 
 class DockerConfigGenerator:
   def __init__(self) -> None:
@@ -613,7 +571,7 @@ class AssetsGenerator:
         shutil.rmtree(destination_dir)
       shutil.copytree(dpath, destination_dir)
 
-    shutil.copy2('./config.yaml', './app/assets/')
+    OmegaConf.save(config, './app/assets/config.yaml')
 
     # add assets to pubspec.yaml
     x = OmegaConf.load('./app/pubspec.yaml')
@@ -623,7 +581,7 @@ class AssetsGenerator:
 
     # icon generate
     os.chdir('./app')
-    data = {'flutter_icons':config.app.flutter_icons.to_dict()}
+    data = {'flutter_icons':OmegaConf.to_container(config.app.flutter_icons)}
     conf = OmegaConf.create(dict(data))
     file_path = './flutter_icons.yaml'
     OmegaConf.save(conf, file_path)
@@ -633,7 +591,7 @@ class AssetsGenerator:
     os.system(f'flutter pub run flutter_launcher_icons -f {file_path}')
 
     # rename package
-    data = {'package_rename_config':config.app.package_rename_config.to_dict()}
+    data = {'package_rename_config':OmegaConf.to_container(config.app.package_rename_config)}
     conf = OmegaConf.create(dict(data))
     file_path = './rename_config.yaml'
     OmegaConf.save(conf, file_path)
@@ -656,9 +614,14 @@ def code_generate():
   print('generate js states')
   if not os.path.exists('./web/src/generated'):
     os.makedirs('./web/src/generated')
+  JSMiscCodeGenerator().generate(
+    web_target_file = './web/src/generated/misc.ts',
+    desk_target_file = './desk/src/generated/misc.ts'
+  )
   JsUICodeGenerator().generate('./web/src/generated/state.js')
-  JSMiscCodeGenerator().generate('./web/src/generated/misc.ts')
   JSRemoteCodeGenerator().generate('./web/src/generated/remote.js')
+  JsUICodeGenerator().generate('./desk/src/generated/state.js')
+  JSRemoteCodeGenerator().generate('./desk/src/generated/remote.js')
 
   print('generate androidmanifest')
   AndroidManifestGenerater().generate('./app/android/app/src/main/AndroidManifest.xml')

@@ -8,6 +8,7 @@ import soundfile as sf
 import matplotlib.pyplot as plt
 import librosa, signal, cv2
 from bs4 import BeautifulSoup
+import _queue
 
 from .utils import *
 
@@ -336,15 +337,19 @@ class Wave:
 
   def to_mp3_bytes(self):
     wave_data = self.data.astype(np.int16)
+    if len(wave_data.shape) == 1:
+      channels = 1
+    else:
+      channels=min(min(*wave_data.shape),2)
     with tempfile.NamedTemporaryFile(suffix='.wav') as f:
       sf.write(f, wave_data, self.sampler_rate)
       f.seek(0)
     
-      audio_segment = AudioSegment.from_raw(
+      audio_segment = AudioSegment.from_wav(
           f,
-          sample_width=2,  # 2 bytes per sample (16-bit audio)
-          frame_rate=self.sampler_rate,
-          channels=min(min(*wave_data.shape),2)
+          #sample_width=2,  # 2 bytes per sample (16-bit audio)
+          #frame_rate=self.sampler_rate,
+          #channels=channels
       )
       
     with tempfile.NamedTemporaryFile(suffix='.mp3') as f:
@@ -427,7 +432,7 @@ class Video:
     # this will silence ffmpeg output
     av.logging.set_level(logging.INFO)
     
-    self.container = av.open(fpath)
+    self.container:av.InputContainer = av.open(fpath)
     self.time_base = self.audio_stream.time_base.denominator
     self.duration  = self.container.duration/1000000
 
@@ -437,13 +442,16 @@ class Video:
     for s in container.streams:  
       if s.type == 'audio':
         return s
-      
+
+  _video_stream = None  
   @property
   def video_stream(self):
     container = self.container
-    for s in container.streams:
-      if s.type == 'video':
-        return s
+    if self._video_stream is None:
+      for s in container.streams:
+        if s.type == 'video':
+          self._video_stream = s
+    return self._video_stream
 
   @property
   def next_audio_frame(self):
@@ -477,6 +485,30 @@ class Video:
   def __len__(self):
     return self.container.size
 
+  queue = Queue() 
+  def _handle_signal(self):
+    try:
+      sig:self.Signal = self.queue.get_nowait()
+    except _queue.Empty:
+      return
+
+    if sig.event == 'seek':
+      timepos = int(self.time_base*sig.data)
+      self.container.seek(timepos, stream=self.video_stream)
+    else:
+      print('unknown signal', sig.event)
+  
+  class Signal:
+    event = None
+    data = None
+
+  def seek(self, timepos):
+    sig = self.Signal() 
+    sig.event = 'seek'
+    sig.data = timepos
+    self.queue.put(sig)
+
+
   def decode(self):
     ''' 
     generate audio in {'audio': ndarray} or video in {'video': Image}
@@ -495,6 +527,7 @@ class Video:
           if type(frame) == av.video.frame.VideoFrame:
             data = self.VideoFrame(frame)
           yield data
+          self._handle_signal()
       except Exception as e:
         print(e)
         traceback.print_exc()

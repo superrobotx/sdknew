@@ -69,6 +69,9 @@ def remote_cmd(args):
   if a2 in ['login']:
     VPS().login()
     sys.exit(0)
+  if a2 in ['log']:
+    VPS().print_log()
+    sys.exit(0)
   if a2 in ['run']:
     if len(args) == 1:
       VPS().run_backend()

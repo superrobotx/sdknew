@@ -1,6 +1,6 @@
 import redis, threading
-from .database import r
 import json
+from base.utils import r_local
 
 queues = {
 
@@ -15,7 +15,7 @@ class Property:
     self.js_channel_name = js_channnel_name
 
   def __get__(self, obj, cls):
-    value = r.hget(f'ui/states_cache/{self.js_channel_name}', self.name)
+    value = r_local.hget(f'ui/states_cache/{self.js_channel_name}', self.name)
     if value is None:
       return self.default_
     return json.loads(value)
@@ -25,8 +25,8 @@ class Property:
 
   def __set__(self, obj, value):
     #r.publish(self.name, json.dumps(value))
-    r.hset(f'ui/states_cache/{self.js_channel_name}', self.name, json.dumps(value))
-    r.publish(self.js_channel_name, json.dumps({'name':self.name,'data':value}))
+    r_local.hset(f'ui/states_cache/{self.js_channel_name}', self.name, json.dumps(value))
+    r_local.publish(self.js_channel_name, json.dumps({'name':self.name,'data':value}))
     tid = threading.current_thread().ident
     if tid in queues:
       queues[tid].put({
@@ -44,7 +44,7 @@ class PropertyElectron:
     self.js_channel_name = js_channnel_name
 
   def __get__(self, obj, cls):
-    value = r.hget('ui/states_cache', self.name)
+    value = r_local.hget('ui/states_cache', self.name)
     if value is None:
       return self.default_
     return json.loads(value)
@@ -54,6 +54,6 @@ class PropertyElectron:
 
   def __set__(self, obj, value):
     #r.publish(self.name, json.dumps(value))
-    r.hset('ui/states_cache', self.name, json.dumps(value))
-    r.publish(self.js_channel_name, json.dumps({'name':self.name,'data':value}))
+    r_local.hset('ui/states_cache', self.name, json.dumps(value))
+    r_local.publish(self.js_channel_name, json.dumps({'name':self.name,'data':value}))
   
