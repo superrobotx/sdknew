@@ -35,6 +35,30 @@ class Encrypotion {
   }
 }
 
+class RemoteError extends Error {
+  final String message;
+
+  RemoteError(this.message);
+
+  @override
+  String toString() {
+    return 'RemoteError: $message';
+  }
+}
+
+Future pingRemote(host) async {
+  var url = Uri.parse('$host/ping');
+  http.Client? client;
+  try {
+    if (!Platform.isFuchsia) {
+      client = http.Client();
+    }
+  } catch (e) {
+    client = FetchClient(mode: RequestMode.cors);
+  }
+  var res = await client!.get(url).timeout(Duration(seconds: 2));
+}
+
 Future callRemote(
     {required String clsName,
     required String funcName,
@@ -56,8 +80,13 @@ Future callRemote(
   } catch (e) {
     client = FetchClient(mode: RequestMode.cors);
   }
+  await pingRemote(remoteUrl);
   var res = await client!.post(url,
       headers: {'Content-Type': 'application/json'}, body: encodedData);
+  print('remote: ${res.statusCode}');
+  if (res.statusCode != 200) {
+    throw RemoteError('remote call error: ${res.body}');
+  }
   var data = jsonDecode(res.body);
   return data;
 }

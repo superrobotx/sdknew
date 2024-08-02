@@ -348,7 +348,7 @@ class JSRemoteCodeGenerator:
       if 'Backend' in cls_node.name:
         cls.name = cls_node.name
         cls.funcs = self._generate_cls_funcs(cls_node)
-    classes.append(cls)
+        classes.append(cls)
 
     text = render('remote.js.j2', classes=classes, misc_file='misc')
     with open(target_file, 'w') as f:
@@ -612,8 +612,12 @@ def code_generate():
   PyUICodeGenerator().generate('./backend/generated/state.py')
 
   print('generate js states')
+  if not os.path.exists('./tmp'):
+    os.makedirs('./tmp')
   if not os.path.exists('./web/src/generated'):
     os.makedirs('./web/src/generated')
+  if not os.path.exists('./desk/src/generated'):
+    os.makedirs('./desk/src/generated')
   JSMiscCodeGenerator().generate(
     web_target_file = './web/src/generated/misc.ts',
     desk_target_file = './desk/src/generated/misc.ts'

@@ -102,6 +102,30 @@ def remote_cmd(args):
   print('unknown command: remote', a2)
   sys.exit(1)
 
+def desk_cmd(args):
+  if not args:
+    print("Usage: python -m manager desk <arg2>")
+    sys.exit(1)
+  a2 = args[0]
+  if a2 in ['run']:
+    os.system('cd desk && npm run dev')
+    sys.exit(0)
+  else:
+    print('unknown command: desk', a2)
+  sys.exit(1)
+
+def web_cmd(args):
+  if not args:
+    print("Usage: python -m manager web <arg2>")
+    sys.exit(1)
+  a2 = args[0]
+  if a2 in ['run']:
+    os.system('cd web && npm run dev')
+    sys.exit(0)
+  else:
+    print('unknown command: web', a2)
+  sys.exit(1)
+
 def backup():
   os.system('./sdk/scripts/backup.sh')
 

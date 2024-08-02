@@ -1,4 +1,5 @@
 from PIL import Image as PILImage
+import librosa
 import asstosrt, ass, srt
 import logging, av
 from scipy.io import wavfile 
@@ -396,14 +397,32 @@ class Video:
   ''' 
   pyav wrapper, video utils,
   '''
-  class AudioFrame(Dict):
+  class AudioFrame:
     def __init__(self, frame, *args, **argv):
-      super().__init__(*args, **argv)
+      #super().__init__(*args, **argv)
       self.type = 'audio'
       arr = frame.to_ndarray()
       x, y = arr.shape
       if x < y:
         arr = arr.T
+
+
+      '''
+      if x > y:
+        arr = arr.T
+      arr = librosa.resample(arr, frame.sample_rate, 16000)
+      if x < y:
+        arr = arr.T
+      self.arr = arr
+      self.sample_rate = 16000
+      self.time_pos = frame.pts * frame.time_base.numerator / frame.time_base.denominator
+      self.n_blocksize, self.n_channel = arr.shape
+      self.dtype = arr.dtype
+      self.frame = frame
+      ''' 
+
+
+
       self.arr = arr
       self.sample_rate = frame.sample_rate
       self.time_pos = frame.pts * frame.time_base.numerator / frame.time_base.denominator
@@ -411,55 +430,102 @@ class Video:
       self.dtype = arr.dtype
       self.frame = frame
 
-  class VideoFrame(Dict):
+  class VideoFrame:
     def __init__(self, frame:av.video.frame.VideoFrame, *args, **argv):
-      super().__init__(*args, **argv)
+      #super().__init__(*args, **argv)
       self.type = 'video'
-      self.img = frame.to_image()
-      
+      self.frame = frame
+
+      ''' 
       imgByteArr = io.BytesIO()
       self.img.save(imgByteArr, format='jpeg')
       self.base64 = base64.b64encode(imgByteArr.getvalue()).decode('utf8')
-      try:
-        self.time_pos = frame.pts * frame.time_base.numerator / frame.time_base.denominator
-      except Exception as e:
-        print(e)
-        self.time_pos = 0
+      '''
         
-      self.frame = frame
+
+    _time_pos = None
+    @property
+    def time_pos(self):
+      if self._time_pos is None:
+        frame = self.frame
+        try:
+          self._time_pos = frame.pts * frame.time_base.numerator / frame.time_base.denominator
+        except Exception as e:
+          print(e)
+          self._time_pos = 0
+      return self._time_pos
+    
+    _image = None
+    @property
+    def image(self):
+      if self._image is None:
+        frame = self.frame
+        img = frame.to_image()
+        self._image = Image.from_PIL(img)
+      return self._image
+    
+    _jpgBase64 = None
+    @property
+    def jpgBase64(self):
+      if self._jpgBase64 is None:
+        self._jpgBase64 = base64.b64encode(self.image.to_jpeg()).decode('utf8')
+      return self._jpgBase64
+    
+
+      
+
       
   def __init__(self, fpath):
     # this will silence ffmpeg output
+    self.lock = Lock()
     av.logging.set_level(logging.INFO)
     
     self.container:av.InputContainer = av.open(fpath)
     self.time_base = self.audio_stream.time_base.denominator
     self.duration  = self.container.duration/1000000
 
+  _audio_stream = None  
   @property
   def audio_stream(self):
     container = self.container
-    for s in container.streams:  
-      if s.type == 'audio':
-        return s
+    if self._audio_stream is None:
+      self.lock.acquire()
+      for s in container.streams:  
+        if s.type == 'audio':
+          self._audio_stream = s
+          break
+      self.lock.release()
+    return self._audio_stream
+      
 
   _video_stream = None  
   @property
   def video_stream(self):
     container = self.container
     if self._video_stream is None:
+      self.lock.acquire()
       for s in container.streams:
         if s.type == 'video':
           self._video_stream = s
+          break
+      self.lock.release()
     return self._video_stream
 
   @property
   def next_audio_frame(self):
-    return self.AudioFrame(next(self.container.decode(self.audio_stream)))
+    stream = self.audio_stream
+    self.lock.acquire()
+    frame = self.AudioFrame(next(self.container.decode(stream)))
+    self.lock.release()
+    return frame
 
   @property
   def next_video_frame(self):
-    return self.VideoFrame(next(self.container.decode(self.video_stream)))
+    stream = self.video_stream
+    self.lock.acquire()
+    frame = self.VideoFrame(next(self.container.decode(stream)))
+    self.lock.release()
+    return frame
 
   @property
   def video_time_pos(self):
@@ -467,10 +533,13 @@ class Video:
 
   @video_time_pos.setter
   def video_time_pos(self, time_pos):
+    stream = self.video_stream
     frame = self.next_video_frame.frame
+
     pts = time_pos / frame.time_base.numerator * frame.time_base.denominator
-    self.container.seek(int(pts), 
-              stream=self.video_stream)
+    self.lock.acquire()
+    self.container.seek(int(pts), stream=stream)
+    self.lock.release()
     
 
   @property
@@ -479,41 +548,26 @@ class Video:
 
   @audio_time_pos.setter
   def audio_time_pos(self, time_pos):
+    self.lock.acquire()
     self.container.seek(int(self.time_base*time_pos),
               stream=self.audio_stream)
+    self.lock.release()
+
+  @property
+  def fps(self):
+    fps = self.video_stream.average_rate
+    a, b = fps.as_integer_ratio()
+    fps = a/b
+    return fps
 
   def __len__(self):
     return self.container.size
 
-  queue = Queue() 
-  def _handle_signal(self):
-    try:
-      sig:self.Signal = self.queue.get_nowait()
-    except _queue.Empty:
-      return
-
-    if sig.event == 'seek':
-      timepos = int(self.time_base*sig.data)
-      self.container.seek(timepos, stream=self.video_stream)
-    else:
-      print('unknown signal', sig.event)
-  
-  class Signal:
-    event = None
-    data = None
-
-  def seek(self, timepos):
-    sig = self.Signal() 
-    sig.event = 'seek'
-    sig.data = timepos
-    self.queue.put(sig)
-
-
-  def decode(self):
+  def _decode(self):
     ''' 
     generate audio in {'audio': ndarray} or video in {'video': Image}
     '''
-    #resampler = av.AudioResampler(format=av.AudioFormat('flt'), layout=self.next_audio_frame.layout_name, rate=16000)
+    #resampler = av.AudioResampler(format=av.AudioFormat('flt'), layout=self.next_audio_frame.frame.layout_name, rate=16000)
     for packet in self.container.demux():
       try:
         for frame in packet.decode():
@@ -527,10 +581,27 @@ class Video:
           if type(frame) == av.video.frame.VideoFrame:
             data = self.VideoFrame(frame)
           yield data
-          self._handle_signal()
       except Exception as e:
         print(e)
         traceback.print_exc()
+
+  _stream = None
+  @property
+  def stream(self): 
+    if self._stream is None:
+      self._stream = self._decode()
+    return self._stream
+
+  def decode(self):
+    while True:
+      try:
+        self.lock.acquire()
+        x = next(self.stream)
+        self.lock.release()
+        yield x
+      except StopIteration:
+        print('iteration stop')
+        break
         
 
 class Subtitle:

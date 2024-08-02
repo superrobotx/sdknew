@@ -59,8 +59,10 @@ class CallBackend(Thread):
       if type(data) == dict:
         tmp = {}
         for k,v in data.items():
-          tmp[k] = len(v)
-        print('yield', tmp)
+          try:
+            print(k, f'len: {len(v)}')
+          except:
+            print(k, v) 
       else:
         print('yield', data)
       yield json.dumps(data) + '\n' 
@@ -69,19 +71,16 @@ class CallBackend(Thread):
 
     if not cls_name.lower().endswith('backend'):
       print('forbid cls name', cls_name)
-      return
+      raise Exception(f'forbid cls name {cls_name}')
     
-    try:
-      if cls_name in self.cached_cls:
-        ins = self.cached_cls[cls_name]
-      else:
-        cls = PyCodeParser().get_cls_by_name(cls_name, 'backend')
-        ins = cls(**init_args)
-        self.cached_cls[cls_name] = ins
-      print('call', func_name)
-      return getattr(ins, func_name)(**func_args)
-    except Exception as e:
-      traceback.print_exc()
+    if cls_name in self.cached_cls:
+      ins = self.cached_cls[cls_name]
+    else:
+      cls = PyCodeParser().get_cls_by_name(cls_name, 'backend')
+      ins = cls(**init_args)
+      self.cached_cls[cls_name] = ins
+    print('call', func_name)
+    return getattr(ins, func_name)(**func_args)
 
   tid = None
   def run(self) -> Any:

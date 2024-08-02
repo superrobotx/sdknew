@@ -15,13 +15,13 @@ import 'package:toastification/toastification.dart';
 print(Object? s) {
   debugPrint('chat: $s');
 }
-
+/*
 showToast(msg, {seconds = 2}) {
   toastification.show(
     title: Text(msg),
     autoCloseDuration: Duration(seconds: seconds),
   );
-}
+}*/
 
 Future<File> getTemporaryFile(ext) async {
   final directory = await getTemporaryDirectory();

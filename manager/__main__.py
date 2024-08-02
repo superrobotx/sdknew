@@ -33,9 +33,14 @@ if a1 in ['remote']:
   remote_cmd(sys.argv[2:])
   sys.exit(0)
 
-if a1 in ['docker']:
-  docker_cmd(sys.argv[2:])
+if a1 in ['desk']:
+  desk_cmd(sys.argv[2:])
   sys.exit(0)
+
+if a1 in ['web']:
+  web_cmd(sys.argv[2:])
+  sys.exit(0)
+
 
 if a1 in ['test']:
   test()

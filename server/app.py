@@ -19,7 +19,6 @@ dist_dir = os.path.abspath('./web/dist')
 
 @app.route('/')
 def index():
-  return '<h1>fuck</h1>', 200
   print(request.headers)
   if config.dev_mode:
     return redirect(f"http://{config.network.local.backend_ip}:{config.network.vite_port}/", code=302)
@@ -27,6 +26,10 @@ def index():
   if request.cookies.get('auth') != config.auth:
     return '<h1>fuck</h1>', 200
   return send_from_directory(dist_dir, 'index.html')
+
+@app.route('/ping')
+def ping():
+  return '<b>hello</b>', 200
 
 # Serve static files
 @app.route('/<path:path>')

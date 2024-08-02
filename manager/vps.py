@@ -63,11 +63,12 @@ class VPS:
   def run_backend(self):
     self._run_remote(f'lsof -ti :{config.network.backend_port} | xargs kill')
     self._run_remote(f"nohup bash -c 'cd {config.name} && {self._env} /usr/bin/python backend ' > out.txt 2>error.txt &")
-    #self._run_remote(f"cd {config.name} && {self._env} /usr/bin/python backend ")
 
   def run_frps(self):
     self.push_to_remote('./tmp/frps.toml')
-    self._run_remote(f'cd {config.name} && PATH=./sdk/bin:$PATH frps -c frps.toml')
+    self._run_remote(f'lsof -ti :9999 | xargs kill')
+    cmd = f'cd {config.name} && PATH=./sdk/bin:$PATH frps -c frps.toml'
+    self._run_remote(f"nohup bash -c '{cmd}' > frp_out.txt 2>frp_error.txt &")
 
   def run_frpc(self):
     cmd = f'./sdk/bin/frpc -c ./tmp/frpc.toml'
